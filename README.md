@@ -1,103 +1,121 @@
-# For You — A Private Universe 🤍
+# Feedback Sentiment Labeling & Escalation Pipeline
 
-An intimate, cinematic, single-page web experience built as a private
-appreciation site for one person. It opens on a black sky of drifting stars,
-asks for a password, and then unfolds — chapter by chapter, like a movie —
-through letters, memory galaxies, a room of little things, a constellation you
-draw by hand, a growing tree of light, and a final "I love you" written in the
-stars.
-
-> _"Some memories deserve more than words."_
+A lightweight Python pipeline that reads raw customer feedback, classifies each row by sentiment, topic, and severity, escalates high-priority items via email, and logs the rest to a file.
 
 ---
 
-## ✨ Make it yours (start here)
+## Overview
 
-**Everything you'll want to change lives in one file:**
-[`src/lib/content.ts`](./src/lib/content.ts)
-
-That single file holds:
-
-| What | Where in `content.ts` |
-|------|------------------------|
-| **The password** + hint | `config.password`, `config.passwordHint` |
-| Names / initials / the date you met | `config` |
-| The opening letter | `letter.lines` |
-| Journey timeline stops | `journey.stops` |
-| Memory Galaxy planets | `galaxy.planets` |
-| Reasons you appreciate them | `reasons.items` |
-| Room object notes | `room.objects` |
-| Constellation reveal | `constellation.reveal` |
-| Future dreams | `dreams.items` |
-| Message-wall notes | `wall.notes` |
-| Photo-cinema captions | `cinema.frames` |
-| The final letter | `final`, `ending.message` |
-
-The default password is **`forever`**. Change it before you share the link.
-
-> **No image or audio files are required.** Every "photo" is rendered
-> procedurally (gradients + WebGL), and the ambient music (soft piano, rain,
-> cafe) is synthesized live in the browser with the Web Audio API. To use your
-> own photos later, swap the procedural `Photo`/planet backgrounds in the
-> relevant chapter components for `next/image`.
+| Step | Script | Output |
+|------|--------|--------|
+| 1. Label | `label_feedback.py` | `high_critical_feedback.csv`, `other_feedback.csv` |
+| 2. Escalate | `escalate.py` | Gmail drafts + `escalation_log.txt` |
+| 3. Test | `test_label_feedback.py` | 29 unit tests |
 
 ---
 
-## 🎬 The chapters
+## Files
 
-1. **Intro** — black sky, drifting stars, one line, an *Enter* that warps you forward.
-2. **Chapter I · Private Access** — a glass card, a floating 3D lock that glows as you type and swings open on the right word.
-3. **Chapter II · Opening Letter** — an envelope that opens; the letter writes itself line by line as the sky warms to sunrise, with falling petals.
-4. **Chapter III · Our Journey** — a winding road of floating polaroids; click one for a cinematic memory.
-5. **Chapter IV · Memory Galaxy** — draggable, zoomable planets you can orbit; each opens a memory with its date, place and song.
-6. **Chapter V · Reasons** — a floating crystal ringed by stars; tap one and it bursts into hearts and a message.
-7. **Chapter VI · Little Things** — an interactive room; a lamp toggles night mode, a clock counts how long you've known each other, live.
-8. **Chapter VII · Constellation** — connect the stars in order and they become a heart.
-9. **Chapter VIII · Future Dreams** — throw a paper plane and the clouds open onto floating dream-islands.
-10. **Chapter IX · Message Wall** — a wall of notes you flip over, one confession at a time.
-11. **Chapter X · Photo Cinema** — a flickering film projector with grain, letterbox, and a slow Ken Burns drift.
-12. **Final · The Heart** — a glowing tree grows leaves of light in a sunset garden, and a last letter appears.
-13. **Ending** — a single ♡. Press it for a shower of petals and *I Love You* in gold.
-
----
-
-## 🛠 Tech
-
-- **Next.js 14** (App Router) + **React 18** + **TypeScript**
-- **TailwindCSS** — glassmorphism, the exact palette, cinematic type
-- **Three.js / React Three Fiber / Drei** — the 3D lock, galaxy, crystal, tree
-- **Framer Motion** — transitions, reveals, the finale
-- **GSAP + Lenis** — buttery smooth scrolling wired into ScrollTrigger
-- **Web Audio API** — procedural ambient soundtrack (no audio assets)
-- A custom glowing-heart cursor that trails sparkles (desktop)
-- Fully responsive; honours `prefers-reduced-motion`
-
----
-
-## 🚀 Run it
-
-```bash
-npm install
-npm run dev      # http://localhost:3000
+```
+.
+├── feedback.csv                 # Raw input: 26 customer feedback rows
+├── label_feedback.py            # Labels each row with sentiment, topic, severity
+├── high_critical_feedback.csv   # Output: 8 rows with severity high or critical
+├── other_feedback.csv           # Output: 18 rows with severity low or medium
+├── escalate.py                  # Drafts escalation emails and logs non-escalated rows
+├── escalation_log.txt           # Append-only log of non-escalated items
+├── test_label_feedback.py       # Unit tests for classification and draft logic
+└── .gitignore
 ```
 
-Production:
+---
 
-```bash
-npm run build
-npm start
-```
+## Labels
 
-The default password is `forever` — set your own in `src/lib/content.ts`.
+### Sentiment
+| Value | Meaning |
+|-------|---------|
+| `positive` | Praise, thanks, satisfaction |
+| `negative` | Frustration, urgency, complaints |
+| `neutral` | Questions, minor notes |
+| `other` | Does not match any pattern |
+
+### Topic
+`billing` · `auth` · `data_loss` · `privacy` · `outage` · `bug` · `performance` · `feature_req` · `ux` · `support` · `positive`
+
+### Severity
+| Value | Examples |
+|-------|---------|
+| `critical` | Privacy breach, double charge, GDPR data deletion request |
+| `high` | Login failure, data loss, cancellation threat, payment failure, report mismatch |
+| `medium` | Crashes, slow load, unanswered tickets, auth bugs |
+| `low` | Feature requests, typos, positive feedback, general questions |
 
 ---
 
-## 📱 Notes
+## Usage
 
-- **Music** starts on the first interaction (the *Enter* button) and can be
-  paused / switched (piano · rain · cafe) from the floating player, bottom-right.
-- **Mobile** keeps the magic — the custom cursor is desktop-only, touch drives
-  the galaxy, and layouts reflow gracefully.
-- The page is marked `noindex` — it's meant to be private.
+### 1. Label feedback
 
-Made with love, and a lot of WebGL. 🤍
+```bash
+python3 label_feedback.py
+```
+
+Reads `feedback.csv` and writes:
+- `high_critical_feedback.csv` — severity `high` or `critical`
+- `other_feedback.csv` — severity `low` or `medium`
+
+Prints a summary table to stdout.
+
+### 2. Run escalations
+
+```bash
+# Optional: set the support lead email (defaults to hello.monago@gmail.com)
+export SUPPORT_LEAD_EMAIL=support-lead@yourcompany.com
+
+python3 escalate.py
+```
+
+- Builds one Gmail draft per high/critical row addressed to `SUPPORT_LEAD_EMAIL`
+- Appends all non-escalated rows to `escalation_log.txt`
+
+> **Note:** `escalate.py` generates the draft payloads. Actual sending requires the Gmail MCP tool (used via Claude Agent SDK). Drafts appear in the connected Gmail account's Drafts folder and must be sent from there.
+
+### 3. Run tests
+
+```bash
+python3 -m unittest test_label_feedback -v
+```
+
+29 tests covering sentiment, topic, severity classification, full `label_row` output, and draft generation.
+
+---
+
+## Input Format
+
+`feedback.csv` must have these columns:
+
+```
+id, date, name, email, channel, message
+```
+
+Supported channels: `email`, `in-app`, `chat`, `app-store`, `twitter`
+
+---
+
+## Results (sample run — 26 rows)
+
+| Severity | Count | Customers |
+|----------|-------|-----------|
+| critical | 3 | Andre Wijaya, Daniel Hutapea, Maya Sari |
+| high | 5 | Siti Rahmawati, Bayu Pratama, Clara Tanuwijaya, Arif Setiawan, Bagus Santoso |
+| medium | 8 | Mega Lestari, Rizky Ananda, Putri Maharani, Fajar Nugroho, Indah Permata, Nadia Kusuma, Dewi Anggraini, Lia Susanti |
+| low | 10 | Hendra Saputra, Tomy Halim, Vina Oktaviani, Galih Pranoto, Sherly Wibowo, Reza Firmansyah, Yoga Mahendra, Eko Prasetyo, Ratna Dewi, Wulan Safitri |
+
+---
+
+## Requirements
+
+- Python 3.10+
+- No external dependencies (standard library only)
+- Gmail MCP server (for escalate.py email drafting, optional)
